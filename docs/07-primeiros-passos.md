@@ -10,7 +10,7 @@ O app precisa de um "endereço na internet" para ser instalado no celular. A for
 
 1. Entre em https://vercel.com e clique em **Sign Up** → **Continue with GitHub**. Autorize.
 2. Clique em **Add New… → Project**. Escolha o repositório **turism**. Se ele não aparecer, clique em *Adjust GitHub App Permissions* e libere o repositório.
-3. Na tela de configuração, em **Branch**, escolha `claude/travel-management-platform-dplfg0`. Não mude mais nada: o arquivo `vercel.json` já diz à Vercel como construir o app.
+3. Na tela de configuração, em **Branch**, escolha `claude/travel-management-platform-dplfg0`. Em **Framework Preset**, se aparecer "Fastify" ou outro nome, troque para **Other**. O resto o arquivo `vercel.json` já define.
 4. Clique em **Deploy** e aguarde uns 3 minutos. Ao final aparece um endereço como `turism-xxxx.vercel.app`. Esse é o seu app.
 
 Se preferir a Netlify, o processo é igual (o arquivo `netlify.toml` já está pronto).
