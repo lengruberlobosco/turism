@@ -52,7 +52,7 @@ export function Checklist({ tripId, kind, dayId, compact }: { tripId: string; ki
           </li>
         ))}
       </ul>
-      <form className="flex gap-2 mt-2" onSubmit={(e) => { e.preventDefault(); if (text.trim()) void addChecklistItem(tripId, kind, text, dayId).then(() => setText("")); }}>
+      <form className="flex gap-2 mt-2" onSubmit={(e) => { e.preventDefault(); const v = text.trim(); if (!v) return; setText(""); void addChecklistItem(tripId, kind, v, dayId); }}>
         <input className="input min-h-10 py-2" placeholder={kind === "day" ? "Ex.: confirmar horário do trem" : "Novo item"} value={text} onChange={(e) => setText(e.target.value)} />
         <button className="btn-ghost min-h-10 py-2" type="submit" aria-label="Adicionar"><Plus size={16} /></button>
       </form>

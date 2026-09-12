@@ -22,7 +22,7 @@ export function TravelersPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-4 grid gap-4">
       <h1 className="text-xl font-semibold">Viajantes e acerto de contas</h1>
-      <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (name.trim()) void addTraveler(trip.id, name).then(() => setName("")); }}>
+      <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); const v = name.trim(); if (!v) return; setName(""); void addTraveler(trip.id, v); }}>
         <input className="input" placeholder="Nome do viajante" value={name} onChange={(e) => setName(e.target.value)} />
         <button className="btn-primary" type="submit"><Plus size={18} /></button>
       </form>
@@ -37,13 +37,15 @@ export function TravelersPage() {
                 const t = travelers.find((x) => x.id === b.traveler_id)!;
                 return (
                   <div key={b.traveler_id} className="flex items-center gap-3 rounded-xl bg-ink/60 px-3 py-2">
-                    <span className="h-8 w-8 rounded-full flex items-center justify-center font-semibold text-ink" style={{ background: t.color }}>{t.name.slice(0, 1).toUpperCase()}</span>
-                    <input className="bg-transparent flex-1 min-w-0 font-medium focus:outline-none" defaultValue={t.name} onBlur={(e) => { if (e.target.value.trim() && e.target.value !== t.name) void updateTraveler(t.id, { name: e.target.value.trim() }); }} aria-label="Nome" />
-                    <div className="text-right text-sm shrink-0">
-                      <p className={b.net > 0.005 ? "text-ok" : b.net < -0.005 ? "text-danger" : "text-slate-400"}>{b.net > 0.005 ? "recebe " : b.net < -0.005 ? "deve " : "quite "}{formatMoney(Math.abs(b.net), trip.base_currency)}</p>
+                    <span className="h-8 w-8 shrink-0 rounded-full flex items-center justify-center font-semibold text-ink" style={{ background: t.color }}>{t.name.slice(0, 1).toUpperCase()}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-2">
+                        <input className="bg-transparent flex-1 min-w-0 font-medium focus:outline-none" defaultValue={t.name} onBlur={(e) => { if (e.target.value.trim() && e.target.value !== t.name) void updateTraveler(t.id, { name: e.target.value.trim() }); }} aria-label="Nome" />
+                        <span className={`shrink-0 text-sm ${b.net > 0.005 ? "text-ok" : b.net < -0.005 ? "text-danger" : "text-slate-400"}`}>{b.net > 0.005 ? "recebe " : b.net < -0.005 ? "deve " : "quite "}{formatMoney(Math.abs(b.net), trip.base_currency)}</span>
+                      </div>
                       <p className="text-xs text-slate-500">pagou {formatMoney(b.paid, trip.base_currency)} · parte {formatMoney(b.owes, trip.base_currency)}</p>
                     </div>
-                    <button className="p-2 text-slate-500 hover:text-danger" aria-label="Remover" onClick={() => { if (confirm(`Remover ${t.name}? Gastos pagos por essa pessoa ficam sem pagador.`)) void deleteTraveler(t.id); }}><Trash2 size={16} /></button>
+                    <button className="p-2 shrink-0 text-slate-500 hover:text-danger" aria-label="Remover" onClick={() => { if (confirm(`Remover ${t.name}? Gastos pagos por essa pessoa ficam sem pagador.`)) void deleteTraveler(t.id); }}><Trash2 size={16} /></button>
                   </div>
                 );
               })}
