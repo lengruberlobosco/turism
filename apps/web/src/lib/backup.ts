@@ -8,16 +8,18 @@ import { listDays } from "@/db/repo";
 export async function exportTripZip(trip_id: string) {
   const trip = await db.trips.get(trip_id);
   if (!trip) return;
-  const [days, activities, assets, asset_days, expenses, fx_rates] = await Promise.all([
+  const [days, activities, assets, asset_days, expenses, fx_rates, travelers, checklist_items] = await Promise.all([
     listDays(trip_id),
     db.activities.where("trip_id").equals(trip_id).toArray(),
     db.assets.where("trip_id").equals(trip_id).toArray(),
     db.asset_days.where("trip_id").equals(trip_id).toArray(),
     db.expenses.where("trip_id").equals(trip_id).toArray(),
     db.fx_rates.toArray(),
+    db.travelers.where("trip_id").equals(trip_id).toArray(),
+    db.checklist_items.where("trip_id").equals(trip_id).toArray(),
   ]);
   const entries: Array<{ name: string; data: Uint8Array }> = [];
-  const manifest = { version: 1, exported_at: new Date().toISOString(), trip, days, activities, assets, asset_days, expenses, fx_rates: fx_rates.filter((r) => r.base === trip.base_currency) };
+  const manifest = { version: 2, exported_at: new Date().toISOString(), trip, days, activities, assets, asset_days, expenses, travelers, checklist_items, fx_rates: fx_rates.filter((r) => r.base === trip.base_currency) };
   entries.push({ name: "trip.json", data: new TextEncoder().encode(JSON.stringify(manifest, null, 2)) });
   for (const a of assets) {
     if (a.deleted_at) continue;
@@ -37,7 +39,7 @@ export async function importTripZip(file: File) {
   const manifestEntry = entries.find((e) => e.name === "trip.json");
   if (!manifestEntry) throw new Error("ZIP inválido: trip.json ausente.");
   const m = JSON.parse(new TextDecoder().decode(manifestEntry.data)) as Awaited<ReturnType<typeof buildManifest>>;
-  await db.transaction("rw", [db.trips, db.trip_days, db.activities, db.assets, db.asset_days, db.expenses, db.fx_rates, db.asset_blobs], async () => {
+  await db.transaction("rw", [db.trips, db.trip_days, db.activities, db.assets, db.asset_days, db.expenses, db.fx_rates, db.asset_blobs, db.travelers, db.checklist_items], async () => {
     await db.trips.put(m.trip);
     await db.trip_days.bulkPut(m.days);
     await db.activities.bulkPut(m.activities);
@@ -45,6 +47,8 @@ export async function importTripZip(file: File) {
     await db.asset_days.bulkPut(m.asset_days);
     await db.expenses.bulkPut(m.expenses);
     await db.fx_rates.bulkPut(m.fx_rates);
+    await db.travelers.bulkPut(m.travelers ?? []);
+    await db.checklist_items.bulkPut(m.checklist_items ?? []);
     for (const e of entries) {
       if (!e.name.startsWith("files/")) continue;
       const id = e.name.slice(6);
@@ -55,7 +59,7 @@ export async function importTripZip(file: File) {
 }
 // tipo auxiliar para o manifesto
 async function buildManifest() {
-  return { trip: (await db.trips.toArray())[0]!, days: await db.trip_days.toArray(), activities: await db.activities.toArray(), assets: await db.assets.toArray(), asset_days: await db.asset_days.toArray(), expenses: await db.expenses.toArray(), fx_rates: await db.fx_rates.toArray() };
+  return { trip: (await db.trips.toArray())[0]!, days: await db.trip_days.toArray(), activities: await db.activities.toArray(), assets: await db.assets.toArray(), asset_days: await db.asset_days.toArray(), expenses: await db.expenses.toArray(), fx_rates: await db.fx_rates.toArray(), travelers: await db.travelers.toArray(), checklist_items: await db.checklist_items.toArray() };
 }
 
 // ---- ZIP mínimo (método store) ----

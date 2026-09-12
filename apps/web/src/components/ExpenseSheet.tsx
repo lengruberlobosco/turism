@@ -6,6 +6,7 @@ import { addExpense, addFileAsset, ratesFor, setAssetOcr } from "@/db/repo";
 import { recognizeReceipt } from "@/ocr";
 import { fetchHistoricalRate } from "@/sync/fx";
 import { useOnline } from "@/lib/network";
+import { useTravelers } from "@/lib/hooks";
 
 /**
  * Fluxo "+ Gasto" (docs/03 §5.3): câmera → OCR → card de sugestão → confirmar.
@@ -13,6 +14,9 @@ import { useOnline } from "@/lib/network";
  */
 export function ExpenseSheet({ open, onClose, trip, day, presetCategory }: { open: boolean; onClose: () => void; trip: Trip; day: TripDay | null; presetCategory?: string }) {
   const online = useOnline();
+  const travelers = useTravelers(trip.id);
+  const [paidBy, setPaidBy] = useState<string | null>(null);
+  const [split, setSplit] = useState<Record<string, number> | null>(null); // null = igual entre todos
   const [step, setStep] = useState<"choose" | "ocr" | "form">("choose");
   const [receipt, setReceipt] = useState<Blob | null>(null);
   const [ocr, setOcr] = useState<OcrResult | null>(null);
@@ -31,6 +35,7 @@ export function ExpenseSheet({ open, onClose, trip, day, presetCategory }: { ope
 
   useEffect(() => {
     if (!open) {
+      setPaidBy(null); setSplit(null);
       setStep("choose"); setReceipt(null); setOcr(null); setAmount(""); setMerchant(""); setNotes(""); setErr(null); setManualRate(""); setCurrency(trip.base_currency); setCategory(presetCategory ?? "food");
     }
   }, [open, trip.base_currency, presetCategory]);
@@ -80,7 +85,7 @@ export function ExpenseSheet({ open, onClose, trip, day, presetCategory }: { ope
         if (ocr) await setAssetOcr(a.id, ocr, "done");
       }
       await addExpense(
-        { trip_id: trip.id, day_id: day?.id ?? null, category, amount: value, currency, merchant: merchant || null, notes: notes || null, receipt_asset_id: receiptId, source: ocr?.source ?? "manual", ocr_confidence: ocr?.confidence ?? null, fx_rate: fx },
+        { trip_id: trip.id, day_id: day?.id ?? null, category, amount: value, currency, merchant: merchant || null, notes: notes || null, receipt_asset_id: receiptId, source: ocr?.source ?? "manual", ocr_confidence: ocr?.confidence ?? null, fx_rate: fx, paid_by: paidBy ?? travelers[0]?.id ?? null, split },
         trip.base_currency,
       );
       onClose();
@@ -147,6 +152,24 @@ export function ExpenseSheet({ open, onClose, trip, day, presetCategory }: { ope
               ))}
             </div>
           </Field>
+          {travelers.length > 0 && (
+            <>
+              <Field group label="Quem pagou">
+                <div className="flex flex-wrap gap-2">
+                  {travelers.map((t) => <button key={t.id} type="button" className={(paidBy ?? travelers[0]?.id) === t.id ? "chip-on" : "chip"} onClick={() => setPaidBy(t.id)}><span className="h-3 w-3 rounded-full" style={{ background: t.color }} /> {t.name}</button>)}
+                </div>
+              </Field>
+              <Field group label="Dividir entre" hint={split ? "Toque para incluir/excluir; pesos iguais entre os marcados." : "Igual entre todos."}>
+                <div className="flex flex-wrap gap-2">
+                  {travelers.map((t) => {
+                    const on = !split || (split[t.id] ?? 0) > 0;
+                    return <button key={t.id} type="button" className={on ? "chip-on" : "chip"} onClick={() => setSplit((s) => { const base = s ?? Object.fromEntries(travelers.map((x) => [x.id, 1])); return { ...base, [t.id]: on ? 0 : 1 }; })}>{t.name}</button>;
+                  })}
+                  {split && <button type="button" className="chip" onClick={() => setSplit(null)}>todos</button>}
+                </div>
+              </Field>
+            </>
+          )}
           <Field label="Estabelecimento">
             <input className={`input ${low("merchant") ? "border-warn" : ""}`} value={merchant} onChange={(e) => setMerchant(e.target.value)} />
           </Field>

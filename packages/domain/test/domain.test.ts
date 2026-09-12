@@ -129,3 +129,37 @@ describe("csv", () => {
     expect(summarize([e]).byCurrency.EUR).toBe(10);
   });
 });
+
+describe("settle", () => {
+  const T = [{ id: "a", name: "Ana" }, { id: "b", name: "Bia" }, { id: "c", name: "Caio" }];
+  it("divide igualmente e joga o resto no maior peso", async () => {
+    const { shareOf } = await import("../src");
+    expect(shareOf({ amount_base: 100, paid_by: "a", split: null }, T)).toEqual({ a: 33.34, b: 33.33, c: 33.33 });
+    expect(shareOf({ amount_base: 90, paid_by: "a", split: { a: 2, b: 1, c: 0 } }, T)).toEqual({ a: 60, b: 30, c: 0 });
+  });
+  it("calcula saldos e transferências mínimas", async () => {
+    const { balances, settle } = await import("../src");
+    const bal = balances([
+      { amount_base: 90, paid_by: "a", split: null },
+      { amount_base: 30, paid_by: "b", split: { b: 1, c: 1 } },
+    ], T);
+    expect(bal.find((b) => b.traveler_id === "a")).toMatchObject({ paid: 90, owes: 30, net: 60 });
+    expect(bal.find((b) => b.traveler_id === "c")).toMatchObject({ paid: 0, owes: 45, net: -45 });
+    const tr = settle(bal);
+    expect(tr).toEqual([{ from: "c", to: "a", amount: 45 }, { from: "b", to: "a", amount: 15 }]);
+    expect(tr.reduce((s, t) => s + t.amount, 0)).toBe(60);
+  });
+});
+
+describe("expiry", () => {
+  it("classifica validade em relação à data de referência", async () => {
+    const { expiryLevel, expiryLabel } = await import("../src");
+    expect(expiryLevel("2026-05-01", "2026-05-10")).toBe("expired");
+    expect(expiryLevel("2026-05-15", "2026-05-10")).toBe("critical");
+    expect(expiryLevel("2026-06-01", "2026-05-10")).toBe("warning");
+    expect(expiryLevel("2026-08-01", "2026-05-10")).toBe("notice");
+    expect(expiryLevel("2027-01-01", "2026-05-10")).toBe("ok");
+    expect(expiryLabel("critical", "2026-05-15", "2026-05-10")).toBe("vence em 5 dia(s)");
+    expect(expiryLabel("ok", null, "2026-05-10")).toBeNull();
+  });
+});

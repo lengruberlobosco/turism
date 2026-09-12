@@ -67,3 +67,33 @@ describe("repo (IndexedDB local)", () => {
     expect([extra.day_index, extra.date]).toEqual([2, "2026-05-12"]);
   });
 });
+
+describe("viajantes e checklists", () => {
+  it("divide gastos entre viajantes e calcula o acerto", async () => {
+    const { addTraveler, listTravelers, addExpense } = await import("@/db/repo");
+    const { balances, settle } = await import("@turism/domain");
+    const trip = await createTrip({ title: "T", start_date: null, end_date: null, base_currency: "BRL" });
+    const ana = await addTraveler(trip.id, "Ana");
+    const bia = await addTraveler(trip.id, "Bia");
+    expect((await listTravelers(trip.id)).map((t) => t.color)).toHaveLength(2);
+    await addExpense({ trip_id: trip.id, day_id: null, category: "food", amount: 100, currency: "BRL", paid_by: ana.id }, "BRL");
+    await addExpense({ trip_id: trip.id, day_id: null, category: "fuel", amount: 40, currency: "BRL", paid_by: bia.id, split: { [ana.id]: 1, [bia.id]: 0 } }, "BRL");
+    const rows = await db.expenses.where("trip_id").equals(trip.id).toArray();
+    const bal = balances(rows.map((e) => ({ amount_base: e.amount_base, paid_by: e.paid_by, split: e.split ?? null })), await listTravelers(trip.id));
+    expect(settle(bal)).toEqual([{ from: bia.id, to: ana.id, amount: 10 }]);
+  });
+  it("aplica template de checklist sem duplicar e alterna itens", async () => {
+    const { applyChecklistTemplate, listChecklist, toggleChecklistItem, addChecklistItem } = await import("@/db/repo");
+    const trip = await createTrip({ title: "T", start_date: null, end_date: null, base_currency: "BRL" });
+    const n = await applyChecklistTemplate(trip.id, "packing");
+    expect(n).toBeGreaterThan(5);
+    expect(await applyChecklistTemplate(trip.id, "packing")).toBe(0);
+    const [first] = await listChecklist(trip.id, "packing");
+    await toggleChecklistItem(first!.id);
+    expect((await listChecklist(trip.id, "packing"))[0]!.done).toBe(true);
+    const [day] = await listDays(trip.id);
+    await addChecklistItem(trip.id, "day", "Confirmar trem", day!.id);
+    expect(await listChecklist(trip.id, "day", day!.id)).toHaveLength(1);
+    expect(await listChecklist(trip.id, "day", null)).toHaveLength(0);
+  });
+});

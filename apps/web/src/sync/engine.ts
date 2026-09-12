@@ -6,7 +6,7 @@ import { getKV, setKV } from "@/db/repo";
  * Motor de sincronização (docs/01 §3.3): empurra a fila de saída e puxa alterações por `updated_at`.
  * Last-writer-wins por linha, soft delete propagado. Só roda se houver backend configurado e sessão.
  */
-const TABLES = ["trips", "trip_days", "activities", "assets", "asset_days", "expenses", "ai_suggestions"] as const;
+const TABLES = ["trips", "trip_days", "activities", "assets", "asset_days", "expenses", "ai_suggestions", "travelers", "checklist_items"] as const;
 type SyncTable = (typeof TABLES)[number];
 
 export interface SyncStatus {

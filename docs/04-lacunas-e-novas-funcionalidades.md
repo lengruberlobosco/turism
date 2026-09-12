@@ -27,14 +27,14 @@ Escala de esforço: **P** (dias), **M** (semanas), **G** (mês ou mais). Valor: 
 
 | Funcionalidade | Valor | Esforço | Descrição |
 |---|---|---|---|
-| **Ingestão por e-mail** (`forward-to-trip`) | ★★★ | M | Encaminhar confirmações de hotel, voo, trem e ingressos. Worker com Claude extrai datas, códigos, endereços e anexa PDF ao dia certo. Elimina a maior parte do cadastro manual. |
-| **Web Share Target** | ★★★ | P | Compartilhar um PDF ou link de qualquer app do celular direto para a viagem/dia. |
-| **Modo balcão** para documentos | ★★★ | P | Tela cheia, brilho máximo, QR/código de barras ampliado, rotação travada. |
-| **Divisão de despesas** entre membros | ★★★ | M | `paid_by` + `split` (igual, por pessoa, por percentual), acerto final e exportação. |
-| **Cartão de emergência offline** | ★★★ | P | Dados vitais, seguro, embaixada, contatos, com acesso rápido sem login. |
-| **Checklists por dia e de mala** | ★★ | P | Itens com estado, templates por tipo de viagem, lembretes na véspera. |
-| **Exportação ZIP e PDF** ("livro da viagem") | ★★ | M | Backup completo e relato final com fotos, mapa e planilha. |
-| **Validade de documentos** com alertas | ★★ | P | Passaporte, visto, CNH, vacinas, seguro. |
+| **Ingestão por e-mail** (`forward-to-trip`) — pendente | ★★★ | M | Encaminhar confirmações de hotel, voo, trem e ingressos. Worker com Claude extrai datas, códigos, endereços e anexa PDF ao dia certo. Elimina a maior parte do cadastro manual. |
+| ✅ **Web Share Target** | ★★★ | P | Compartilhar um PDF ou link de qualquer app do celular direto para a viagem/dia. |
+| ✅ **Modo balcão** para documentos | ★★★ | P | Tela cheia, brilho máximo, QR/código de barras ampliado, rotação travada. |
+| ✅ **Divisão de despesas** entre membros | ★★★ | M | `paid_by` + `split` (igual, por pessoa, por percentual), acerto final e exportação. |
+| ✅ **Cartão de emergência offline** | ★★★ | P | Dados vitais, seguro, embaixada, contatos, com acesso rápido sem login. |
+| ✅ **Checklists por dia e de mala** | ★★ | P | Itens com estado, templates por tipo de viagem, lembretes na véspera. |
+| ✅ **Exportação ZIP e PDF** ("livro da viagem") | ★★ | M | Backup completo e relato final com fotos, mapa e planilha. |
+| ✅ **Validade de documentos** com alertas | ★★ | P | Passaporte, visto, CNH, vacinas, seguro. |
 
 ### 2.2 Média prioridade
 

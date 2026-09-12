@@ -4,7 +4,10 @@ import { Download, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { formatMoney, summarize, categoryIcon, categoryLabel, expensesToCsv, type Trip, type TripDay, type CurrentDayResult, type Expense } from "@turism/domain";
 import { useExpenses } from "@/lib/hooks";
 import { ExpenseSheet } from "@/components/ExpenseSheet";
-import { deleteExpense } from "@/db/repo";
+import { deleteExpense, updateTrip } from "@/db/repo";
+import { Link } from "react-router-dom";
+import { Progress } from "@/components/ui";
+import { useTravelers } from "@/lib/hooks";
 import { refreshRates, lastFxRefresh } from "@/sync/fx";
 import { useEffect } from "react";
 import { timeAgo } from "@/lib/format";
@@ -19,6 +22,8 @@ export function ExpensesPage() {
   const [sheet, setSheet] = useState(false);
   const [fx, setFx] = useState<{ at: string; date: string } | undefined>();
   const [busy, setBusy] = useState(false);
+  const travelers = useTravelers(trip.id);
+  const nameOf = (id: string | null) => travelers.find((t) => t.id === id)?.name;
   useEffect(() => { void lastFxRefresh(trip.base_currency).then(setFx); }, [trip.base_currency, busy]);
   const sums = summarize(expenses);
   const byDay = new Map<string | null, Expense[]>();
@@ -52,6 +57,15 @@ export function ExpensesPage() {
         <div className="flex flex-wrap gap-2 mt-2">
           {Object.entries(sums.byCategory).sort((a, b) => b[1] - a[1]).map(([c, v]) => <span key={c} className="chip">{categoryIcon(c)} {categoryLabel(c)} · {formatMoney(v, trip.base_currency)}</span>)}
         </div>
+        <div className="mt-3">
+          <div className="flex items-center gap-2 text-xs text-slate-400">
+            <span className="flex-1">Orçamento: {trip.budget_base ? `${formatMoney(sums.total, trip.base_currency)} de ${formatMoney(trip.budget_base, trip.base_currency)} (${Math.round((sums.total / trip.budget_base) * 100)}%)` : "não definido"}</span>
+            <button className="text-accent" onClick={() => { const v = prompt(`Orçamento total da viagem em ${trip.base_currency}:`, trip.budget_base ? String(trip.budget_base) : ""); if (v !== null) void updateTrip(trip.id, { budget_base: v ? Number(v.replace(",", ".")) : null }); }}>definir</button>
+          </div>
+          {trip.budget_base ? <div className="mt-1"><Progress value={Math.min(1, sums.total / trip.budget_base)} /></div> : null}
+          {trip.budget_base && sums.total > trip.budget_base ? <p className="text-xs text-danger mt-1">Orçamento estourado em {formatMoney(sums.total - trip.budget_base, trip.base_currency)}.</p> : null}
+        </div>
+        {travelers.length > 0 && <Link to="../travelers" className="text-xs text-accent block mt-2">Ver acerto de contas entre {travelers.length} viajantes →</Link>}
         <div className="flex items-center gap-2 mt-3 text-xs text-slate-400">
           <span>Câmbio: {fx ? `cotação de ${fx.date}, atualizada ${timeAgo(fx.at)}` : "nunca atualizado"}</span>
           <button className="ml-auto inline-flex items-center gap-1 text-accent disabled:opacity-40" onClick={() => void updateFx()} disabled={!online || busy}><RefreshCw size={12} className={busy ? "animate-spin" : ""} /> atualizar</button>
@@ -76,7 +90,7 @@ export function ExpensesPage() {
                     <td className="py-2 w-8">{categoryIcon(e.category)}</td>
                     <td className="py-2">
                       <p>{e.merchant ?? categoryLabel(e.category)}</p>
-                      <p className="text-xs text-slate-500">{new Date(e.spent_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}{e.source !== "manual" ? " · OCR" : ""}{e.notes ? ` · ${e.notes}` : ""}</p>
+                      <p className="text-xs text-slate-500">{new Date(e.spent_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}{e.source !== "manual" ? " · OCR" : ""}{nameOf(e.paid_by) ? ` · pago por ${nameOf(e.paid_by)}` : ""}{e.notes ? ` · ${e.notes}` : ""}</p>
                     </td>
                     <td className="py-2 text-right tabular-nums">
                       <p>{formatMoney(e.amount_base, trip.base_currency)}</p>

@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useParams, Link } from "react-router-dom";
-import { CalendarDays, FolderOpen, Wallet, Sparkles, ChevronLeft, Settings } from "lucide-react";
+import { CalendarDays, FolderOpen, Wallet, Sparkles, ChevronLeft, Settings, MoreHorizontal } from "lucide-react";
+import { MORE_LINKS } from "./MorePage";
 import { useTrip, useDays, useSuggestions } from "@/lib/hooks";
 import { useOnline } from "@/lib/network";
 import { useEffect, useState } from "react";
@@ -24,6 +25,7 @@ export function TripLayout() {
     { to: "documents", icon: FolderOpen, label: "Docs" },
     { to: "expenses", icon: Wallet, label: "Gastos" },
     { to: "suggestions", icon: Sparkles, label: "IA", badge: suggestions.length },
+    { to: "more", icon: MoreHorizontal, label: "Mais" },
   ];
   return (
     <div className="min-h-full lg:grid lg:grid-cols-[240px_1fr]">
@@ -39,7 +41,7 @@ export function TripLayout() {
           </NavLink>
         ))}
         <p className="section-title mt-4 mb-1">Módulos</p>
-        {tabs.slice(1).map((t) => (
+        {[...tabs.slice(1, 4), ...MORE_LINKS.filter((l) => l.to !== "import").map((l) => ({ to: l.to, icon: l.icon, label: l.label.split(" e ")[0]!, badge: 0 }))].map((t) => (
           <NavLink key={t.to} to={t.to} className={({ isActive }) => `rounded-lg px-3 py-2 text-sm flex items-center gap-2 ${isActive ? "bg-panel text-accent" : "hover:bg-panel/60"}`}>
             <t.icon size={16} /> {t.label} {t.badge ? <span className="ml-auto text-xs rounded-full bg-accent/20 text-accent px-2">{t.badge}</span> : null}
           </NavLink>
@@ -61,7 +63,7 @@ export function TripLayout() {
         </div>
         {/* barra inferior mobile */}
         <nav className="lg:hidden fixed bottom-0 inset-x-0 z-20 bg-ink/95 backdrop-blur border-t border-line/60 safe-bottom pt-1">
-          <div className="grid grid-cols-4">
+          <div className="grid grid-cols-5">
             {tabs.map((t) => (
               <NavLink key={t.to} to={t.to} className={({ isActive }) => `flex flex-col items-center gap-0.5 py-1.5 text-[11px] relative ${isActive ? "text-accent" : "text-slate-400"}`}>
                 <t.icon size={20} /> {t.label}

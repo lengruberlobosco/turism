@@ -120,3 +120,53 @@ test("OCR no dispositivo lê o total de um recibo", async ({ page, context }) =>
   await page.getByRole("button", { name: "Confirmar gasto" }).click();
   await expect(page.getByText("R$ 43,50").first()).toBeVisible();
 });
+
+test("Web Share Target recebe arquivo via Service Worker e abre o sheet de upload", async ({ page }) => {
+  await page.goto("/trips/new");
+  await page.getByPlaceholder("Expedição Patagônia 2026").fill("Share");
+  await page.getByRole("button", { name: "Criar viagem" }).click();
+  await expect(page.getByRole("button", { name: /^Dia 1/ })).toBeVisible();
+  await page.waitForFunction(() => navigator.serviceWorker?.controller != null, null, { timeout: 15_000 });
+  // simula outro app compartilhando um PDF (POST multipart interceptado pelo SW)
+  const status = await page.evaluate(async () => {
+    const fd = new FormData();
+    fd.append("title", "Voucher compartilhado");
+    fd.append("files", new File(["%PDF-1.1"], "voucher.pdf", { type: "application/pdf" }));
+    const res = await fetch("/share-target", { method: "POST", body: fd, redirect: "manual" });
+    return { type: res.type, status: res.status };
+  });
+  expect(["opaqueredirect", "default"]).toContain(status.type);
+  await page.goto("/share-target?title=Voucher%20compartilhado");
+  await expect(page.getByText("1 arquivo(s) recebido(s).")).toBeVisible();
+  await page.getByRole("button", { name: "Share" }).click();
+  await expect(page.getByRole("dialog", { name: /Adicionar documento/ })).toBeVisible();
+  await expect(page.getByText("1 arquivo(s) ·")).toBeVisible();
+  await page.getByRole("button", { name: "Salvar" }).click();
+  await expect(page.getByRole("button", { name: /^Dia 1/ })).toBeVisible();
+  await page.locator("nav").getByRole("link", { name: "Docs" }).click();
+  await expect(page.getByText("voucher").first()).toBeVisible();
+});
+
+test("viajantes: divisão de gasto e acerto de contas", async ({ page }) => {
+  await page.goto("/trips/new");
+  await page.getByPlaceholder("Expedição Patagônia 2026").fill("Split");
+  await page.getByRole("button", { name: "Criar viagem" }).click();
+  await page.locator("nav").getByRole("link", { name: "Mais" }).click();
+  await page.getByRole("link", { name: /Viajantes/ }).click();
+  await page.getByPlaceholder("Nome do viajante").fill("Ana");
+  await page.getByPlaceholder("Nome do viajante").press("Enter");
+  await page.getByPlaceholder("Nome do viajante").fill("Bia");
+  await page.getByPlaceholder("Nome do viajante").press("Enter");
+  await expect(page.getByText("Tudo quite.")).toBeVisible();
+  // na emulação mobile do Chromium o viewport de layout cresce após o teclado virtual e a barra fixa sai da área visível
+  await page.goto(page.url().replace("/travelers", "/expenses"));
+  await page.getByRole("button", { name: "Gasto", exact: true }).click();
+  await page.getByRole("button", { name: /Lançar manualmente/ }).click();
+  await page.getByPlaceholder("0,00").fill("100");
+  await page.getByRole("group", { name: "Quem pagou" }).getByRole("button", { name: "Ana" }).click();
+  await page.getByRole("button", { name: "Confirmar gasto" }).click();
+  await expect(page.getByText(/pago por Ana/)).toBeVisible();
+  await page.getByRole("link", { name: /acerto de contas/ }).click();
+  await expect(page.getByText("R$ 50,00").first()).toBeVisible();
+  await expect(page.getByText("recebe R$ 50,00")).toBeVisible();
+});

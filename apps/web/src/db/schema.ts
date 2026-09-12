@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from "dexie";
-import type { Trip, TripDay, Activity, Asset, AssetDay, Expense, FxRate, AiSuggestion } from "@turism/domain";
+import type { Trip, TripDay, Activity, Asset, AssetDay, Expense, FxRate, AiSuggestion, TravelerRow, ChecklistItem } from "@turism/domain";
 
 /** Blob do arquivo, guardado localmente (IndexedDB) — é isso que garante o offline dos documentos. */
 export interface AssetBlob {
@@ -34,6 +34,8 @@ export class TurismDB extends Dexie {
   expenses!: EntityTable<Expense, "id">;
   fx_rates!: EntityTable<FxRate, "id">;
   ai_suggestions!: EntityTable<AiSuggestion, "id">;
+  travelers!: EntityTable<TravelerRow, "id">;
+  checklist_items!: EntityTable<ChecklistItem, "id">;
   asset_blobs!: EntityTable<AssetBlob, "asset_id">;
   outbox!: EntityTable<OutboxItem, "id">;
   kv!: EntityTable<KV, "key">;
@@ -52,6 +54,10 @@ export class TurismDB extends Dexie {
       asset_blobs: "asset_id",
       outbox: "++id, table, created_at",
       kv: "key",
+    });
+    this.version(2).stores({
+      travelers: "id, trip_id, updated_at",
+      checklist_items: "id, trip_id, day_id, [trip_id+kind], updated_at",
     });
   }
 }

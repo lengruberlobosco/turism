@@ -10,6 +10,11 @@ import { ExpensesPage } from "./pages/ExpensesPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { ShareTargetPage } from "./pages/ShareTargetPage";
 import { SuggestionsPage } from "./pages/SuggestionsPage";
+import { MorePage } from "./pages/MorePage";
+import { TravelersPage } from "./pages/TravelersPage";
+import { ChecklistsPage } from "./pages/ChecklistsPage";
+import { EmergencyPage } from "./pages/EmergencyPage";
+import { BookPage } from "./pages/BookPage";
 
 export const router = createBrowserRouter([
   {
@@ -35,6 +40,11 @@ export const router = createBrowserRouter([
           { path: "expenses", element: <ExpensesPage /> },
           { path: "suggestions", element: <SuggestionsPage /> },
           { path: "import", element: <ImportPage /> },
+          { path: "more", element: <MorePage /> },
+          { path: "travelers", element: <TravelersPage /> },
+          { path: "checklists", element: <ChecklistsPage /> },
+          { path: "emergency", element: <EmergencyPage /> },
+          { path: "book", element: <BookPage /> },
         ],
       },
       { path: "*", element: <Navigate to="/" replace /> },

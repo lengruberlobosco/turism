@@ -11,6 +11,7 @@ export function AssetUploadSheet({ open, onClose, tripId, days, defaultDayId, in
   const [category, setCategory] = useState<string>(initialUrl ? "map_link" : "hotel_voucher");
   const [critical, setCritical] = useState(false);
   const [sensitive, setSensitive] = useState(false);
+  const [expires, setExpires] = useState("");
   const [dayIds, setDayIds] = useState<string[]>(defaultDayId ? [defaultDayId] : []);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -26,7 +27,7 @@ export function AssetUploadSheet({ open, onClose, tripId, days, defaultDayId, in
         await addLinkAsset(tripId, { title: title || url, url, category, day_ids: dayIds, critical });
       } else {
         if (files.length === 0) throw new Error("Escolha ao menos um arquivo.");
-        for (const f of files) await addFileAsset(tripId, f, { title: files.length === 1 && title ? title : f.name.replace(/\.[^.]+$/, ""), category, critical, sensitive, day_ids: dayIds });
+        for (const f of files) await addFileAsset(tripId, f, { title: files.length === 1 && title ? title : f.name.replace(/\.[^.]+$/, ""), category, critical, sensitive, day_ids: dayIds, expires_at: expires || null });
       }
       onClose();
     } catch (e) {
@@ -70,6 +71,11 @@ export function AssetUploadSheet({ open, onClose, tripId, days, defaultDayId, in
         </div>
       </Field>
       <label className="flex items-center gap-2 mb-2 min-h-10"><input type="checkbox" checked={critical} onChange={(e) => setCritical(e.target.checked)} /> Crítico (passagem, voucher): prioridade no offline e destaque no card “Agora”</label>
+      {mode === "file" && (category === "insurance" || category === "other" || category === "ticket") && (
+        <Field label="Validade (passaporte, visto, seguro, CNH)" hint="Alertas 90, 30 e 7 dias antes da viagem e quando vencido.">
+          <input className="input" type="date" value={expires} onChange={(e) => setExpires(e.target.value)} />
+        </Field>
+      )}
       {mode === "file" && <label className="flex items-center gap-2 mb-4 min-h-10"><input type="checkbox" checked={sensitive} onChange={(e) => setSensitive(e.target.checked)} /> Sensível (passaporte, seguro): não é enviado à IA</label>}
       {err && <p className="text-danger text-sm mb-3">{err}</p>}
       <button className="btn-primary w-full" onClick={() => void save()} disabled={busy}>{busy ? "Salvando…" : "Salvar"}</button>

@@ -4,13 +4,18 @@ import { Plus, FileInput, MapPin } from "lucide-react";
 import { db } from "@/db/schema";
 import { Empty } from "@/components/ui";
 import { formatDatePt } from "@/lib/format";
-import { pickCurrentDay } from "@turism/domain";
+import { pickCurrentDay, expiryLevel } from "@turism/domain";
 import { listDays } from "@/db/repo";
 
 export function TripsPage() {
   const trips = useLiveQuery(async () => {
     const rows = (await db.trips.toArray()).filter((t) => !t.deleted_at).sort((a, b) => (b.start_date ?? "").localeCompare(a.start_date ?? ""));
-    return Promise.all(rows.map(async (t) => ({ trip: t, days: await listDays(t.id) })));
+    return Promise.all(rows.map(async (t) => {
+      const assets = (await db.assets.where("trip_id").equals(t.id).toArray()).filter((a) => !a.deleted_at && a.expires_at);
+      const ref = t.start_date ?? new Date().toISOString().slice(0, 10);
+      const alerts = assets.map((a) => ({ title: a.title, level: expiryLevel(a.expires_at, ref) })).filter((a) => a.level !== "ok" && a.level !== "notice");
+      return { trip: t, days: await listDays(t.id), alerts };
+    }));
   }, []);
   return (
     <div className="max-w-5xl mx-auto px-4 py-6">
@@ -37,7 +42,7 @@ export function TripsPage() {
         />
       )}
       <div className="grid gap-3 sm:grid-cols-2">
-        {trips?.map(({ trip, days }) => {
+        {trips?.map(({ trip, days, alerts }) => {
           const cur = pickCurrentDay(days);
           return (
             <Link key={trip.id} to={`/trips/${trip.id}`} className="card hover:border-accent/60 transition block">
@@ -52,6 +57,7 @@ export function TripsPage() {
                   {cur.mode === "active" ? `Em viagem · Dia ${cur.day?.day_index}` : cur.mode === "done" ? "Concluída" : cur.mode === "undated" ? "Sem datas" : "Planejando"}
                 </span>
               </div>
+              {alerts.length > 0 && <p className="text-xs text-danger mt-2">⚠ {alerts.map((a) => `${a.title} (${a.level === "expired" ? "vencido" : "vence em breve"})`).join(", ")}</p>}
             </Link>
           );
         })}

@@ -3,6 +3,17 @@ import { z } from "zod";
 const iso = z.string(); // timestamps ISO-8601 em UTC
 const dateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/); // YYYY-MM-DD
 
+export const EmergencySchema = z.object({
+  contacts: z.array(z.object({ name: z.string(), phone: z.string(), relation: z.string().nullable() })),
+  insurance: z.object({ company: z.string(), policy: z.string(), phone: z.string() }).nullable(),
+  embassy: z.string().nullable(),
+  blood_type: z.string().nullable(),
+  allergies: z.string().nullable(),
+  medications: z.string().nullable(),
+  notes: z.string().nullable(),
+});
+export type Emergency = z.infer<typeof EmergencySchema>;
+
 export const TripSchema = z.object({
   id: z.string(),
   title: z.string().min(1),
@@ -11,6 +22,8 @@ export const TripSchema = z.object({
   base_currency: z.string().length(3),
   status: z.enum(["planning", "active", "done"]),
   cover_asset_id: z.string().nullable().optional(),
+  budget_base: z.number().nullable().optional(),
+  emergency: EmergencySchema.nullable().optional(),
   created_at: iso,
   updated_at: iso,
   deleted_at: iso.nullable().optional(),
@@ -80,6 +93,7 @@ export const AssetSchema = z.object({
   ocr: OcrResultSchema.nullable().optional(),
   ocr_status: z.enum(["none", "pending", "done", "failed"]),
   captured_at: iso.nullable(),
+  expires_at: dateStr.nullable().optional(),
   attribution: z.string().nullable().optional(),
   updated_at: iso,
   deleted_at: iso.nullable().optional(),
@@ -108,6 +122,7 @@ export const ExpenseSchema = z.object({
   fx_rate_date: dateStr,
   amount_base: z.number(),
   paid_by: z.string().nullable(),
+  split: z.record(z.number()).nullable().optional(),
   payment_method: z.string().nullable(),
   merchant: z.string().nullable(),
   receipt_asset_id: z.string().nullable(),
@@ -168,3 +183,26 @@ export const ParsedItinerarySchema = z.object({
   ),
 });
 export type ParsedItinerary = z.infer<typeof ParsedItinerarySchema>;
+
+export const TravelerSchema = z.object({
+  id: z.string(),
+  trip_id: z.string(),
+  name: z.string().min(1),
+  color: z.string(),
+  updated_at: iso,
+  deleted_at: iso.nullable().optional(),
+});
+export type TravelerRow = z.infer<typeof TravelerSchema>;
+
+export const ChecklistItemSchema = z.object({
+  id: z.string(),
+  trip_id: z.string(),
+  day_id: z.string().nullable(),
+  kind: z.enum(["packing", "day", "border", "vehicle"]),
+  text: z.string().min(1),
+  done: z.boolean(),
+  position: z.number(),
+  updated_at: iso,
+  deleted_at: iso.nullable().optional(),
+});
+export type ChecklistItem = z.infer<typeof ChecklistItemSchema>;

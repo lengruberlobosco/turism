@@ -9,6 +9,9 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
+      strategies: "injectManifest",
+      srcDir: "src",
+      filename: "sw.ts",
       registerType: "prompt",
       includeAssets: ["icons/*.svg", "icons/*.png"],
       manifest: {
@@ -35,30 +38,10 @@ export default defineConfig({
           params: { title: "title", text: "text", url: "url", files: [{ name: "files", accept: ["image/*", "application/pdf", "audio/*"] }] },
         },
       } as never,
-      workbox: {
+      injectManifest: {
         globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
         globIgnores: ["ocr/**"],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
-        navigateFallback: "/index.html",
-        navigateFallbackDenylist: [/^\/share-target/],
-        runtimeCaching: [
-          {
-            // Tesseract.js: worker, core wasm e dados de idioma ficam em cache após o primeiro uso
-            urlPattern: ({ url }) => /\/ocr\/|tesseract|tessdata/.test(url.href),
-            handler: "CacheFirst",
-            options: { cacheName: "ocr-engine", expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 } },
-          },
-          {
-            urlPattern: ({ url }) => url.hostname === "api.frankfurter.app" || url.hostname === "api.frankfurter.dev",
-            handler: "NetworkFirst",
-            options: { cacheName: "fx-api", networkTimeoutSeconds: 4, expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 7 } },
-          },
-          {
-            urlPattern: ({ url }) => /supabase\.co\/storage/.test(url.href),
-            handler: "CacheFirst",
-            options: { cacheName: "remote-assets", expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 90 } },
-          },
-        ],
       },
       devOptions: { enabled: false },
     }),

@@ -3,7 +3,7 @@
 Monorepo pnpm. `pnpm install` na raiz; depois:
 
 - `pnpm dev` — PWA em http://localhost:5173 (funciona sem backend; dados no IndexedDB).
-- `pnpm test` — unit (domain, functions, ai-worker). `pnpm --filter @turism/web test:e2e` — Playwright (offline, importação, OCR). Sem download de browser: `PW_CHROMIUM_PATH=/caminho/chromium`.
+- `pnpm test` — unit (domain, web, functions, ai-worker). `pnpm --filter @turism/web test:e2e` — Playwright (offline, importação, OCR, share target, viajantes). O Service Worker é `apps/web/src/sw.ts` (Workbox injectManifest). Sem download de browser: `PW_CHROMIUM_PATH=/caminho/chromium`.
 - `pnpm typecheck` / `pnpm build`.
 
 Estrutura: `packages/domain` (regras puras + Zod), `apps/web` (React PWA, Dexie, Workbox), `supabase/` (migrations, Edge Functions; `_shared/ai.ts` é a lógica de IA), `apps/ai-worker` (Node, pg-boss, reutiliza `_shared/ai.ts`), `docs/` (arquitetura, dados, UX, roadmap).

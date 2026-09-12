@@ -12,6 +12,7 @@ import { AssetUploadSheet } from "@/components/AssetUploadSheet";
 import { ExpenseSheet } from "@/components/ExpenseSheet";
 import { Sheet, Field } from "@/components/ui";
 import { addFileAsset, appendDay, deleteDay, setAssetPriority, updateDay, getKV, setKV } from "@/db/repo";
+import { Checklist } from "./ChecklistsPage";
 
 type Ctx = { trip: Trip; days: TripDay[]; current: CurrentDayResult<TripDay> };
 
@@ -175,6 +176,11 @@ export function DayPage() {
             {expenses.length === 0 && <span className="text-slate-500 text-sm">Nenhum gasto ainda.</span>}
           </div>
           {road && <button className="btn-ghost w-full mt-3" onClick={() => setExpense({ category: "fuel" })}>⛽ Gasto de combustível</button>}
+        </section>
+
+        <section className="card">
+          <h2 className="section-title mb-2">Checklist do dia</h2>
+          <Checklist tripId={trip.id} kind="day" dayId={day.id} compact />
         </section>
 
         {/* fotos e notas */}

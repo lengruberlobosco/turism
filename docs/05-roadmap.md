@@ -8,7 +8,7 @@
 | 1 — Módulos 1 e 2 | ✅ | Tela do dia (mobile e desktop), timeline, documentos vinculados a dias, viewer "modo balcão", captura de foto/áudio, gesto de deslizar, fixar dia, modo estrada. E2E `viagem completa funciona offline` |
 | 2 — Módulo 3 | ✅ | Gastos com taxa congelada, câmbio Frankfurter com cache, OCR em camadas (Claude visão via Edge Function; Tesseract.js local), CSV. E2E `OCR no dispositivo lê o total de um recibo` |
 | 3 — Módulo 4 | ✅ código / ⏳ deploy | `_shared/ai.ts` (structured outputs, PDF nativo, web search, Wikimedia com licença), Edge Functions, worker pg-boss, parser local de texto como fallback. E2E `importa roteiro em texto`. Exige `ANTHROPIC_API_KEY` e projeto Supabase para a parte online |
-| 4 — Diferenciais | parcial | Backup ZIP export/import, Web Share Target (links/texto), modo estrada, botão rápido de combustível. Pendentes: ingestão por e-mail, voos, mapa offline, divisão de despesas, módulo veículo |
+| 4 — Diferenciais | parcial | **Feito**: Web Share Target com arquivos (SW `injectManifest`), divisão de despesas entre viajantes com acerto de contas mínimo, cartão de emergência offline, checklists (mala, fronteira, veículo, por dia) com modelos, validade de documentos com alertas, orçamento planejado × realizado, livro da viagem (impressão/PDF), backup ZIP, modo estrada. E2E `Web Share Target` e `viajantes`. **Pendentes**: ingestão por e-mail, rastreamento de voos/trens, mapa offline (PMTiles) e GPX, geofencing, transcrição de áudio, vinculação automática de fotos por EXIF, módulo veículo (odômetro/consumo), colaboração em tempo real |
 
 ### Como ativar o backend
 

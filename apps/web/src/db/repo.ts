@@ -1,11 +1,13 @@
 import { db } from "./schema";
 import {
   uuidv7, dateRange, pickRate, toBase,
+  CHECKLIST_TEMPLATES,
   type Trip, type TripDay, type Activity, type Asset, type AssetDay, type Expense, type OcrResult, type AiSuggestion, type ParsedItinerary,
+  type TravelerRow, type ChecklistItem, type ChecklistKind,
 } from "@turism/domain";
 
 const nowIso = () => new Date().toISOString();
-const SYNC_TABLES = ["trips", "trip_days", "activities", "assets", "asset_days", "expenses", "ai_suggestions"] as const;
+const SYNC_TABLES = ["trips", "trip_days", "activities", "assets", "asset_days", "expenses", "ai_suggestions", "travelers", "checklist_items"] as const;
 type SyncTable = (typeof SYNC_TABLES)[number];
 
 /** Escreve localmente e enfileira para sync. Toda escrita passa por aqui. */
@@ -167,7 +169,7 @@ export async function compressImage(file: Blob, max = 2048): Promise<Blob> {
 export async function addFileAsset(
   trip_id: string,
   file: File | Blob,
-  input: { title: string; category: string; kind?: Asset["kind"]; critical?: boolean; sensitive?: boolean; day_ids?: string[]; captured_at?: string | null },
+  input: { title: string; category: string; kind?: Asset["kind"]; critical?: boolean; sensitive?: boolean; day_ids?: string[]; captured_at?: string | null; expires_at?: string | null },
 ): Promise<Asset> {
   const mime = file.type || "application/octet-stream";
   const kind: Asset["kind"] = input.kind ?? (mime.startsWith("image/") ? "photo" : mime.startsWith("audio/") ? "audio" : "document");
@@ -175,7 +177,7 @@ export async function addFileAsset(
   const asset: Asset = {
     id: uuidv7(), trip_id, kind, category: input.category, title: input.title, storage_path: null, url: null, mime: blob.type || mime,
     size_bytes: blob.size, sha256: await sha256(blob), sensitive: input.sensitive ?? false, critical: input.critical ?? false,
-    ocr: null, ocr_status: "none", captured_at: input.captured_at ?? nowIso(), attribution: null, updated_at: nowIso(), deleted_at: null,
+    ocr: null, ocr_status: "none", captured_at: input.captured_at ?? nowIso(), expires_at: input.expires_at ?? null, attribution: null, updated_at: nowIso(), deleted_at: null,
   };
   const thumb = await makeThumb(blob);
   await db.transaction("rw", db.assets, db.asset_blobs, db.asset_days, db.outbox, async () => {
@@ -257,6 +259,8 @@ export interface ExpenseInput {
   notes?: string | null;
   payment_method?: string | null;
   receipt_asset_id?: string | null;
+  paid_by?: string | null;
+  split?: Record<string, number> | null;
   source?: Expense["source"];
   ocr_confidence?: number | null;
   spent_at?: string;
@@ -276,7 +280,7 @@ export async function addExpense(input: ExpenseInput, base_currency: string): Pr
   if (rate == null) throw new Error(`Sem taxa de câmbio ${input.currency}→${base_currency}. Conecte-se para atualizar o câmbio ou informe a taxa manualmente.`);
   const e: Expense = {
     id: uuidv7(), trip_id: input.trip_id, day_id: input.day_id, category: input.category, amount: input.amount, currency: input.currency,
-    fx_rate: rate, fx_rate_date: rate_date, amount_base: toBase(input.amount, rate), paid_by: null, payment_method: input.payment_method ?? null,
+    fx_rate: rate, fx_rate_date: rate_date, amount_base: toBase(input.amount, rate), paid_by: input.paid_by ?? null, split: input.split ?? null, payment_method: input.payment_method ?? null,
     merchant: input.merchant ?? null, receipt_asset_id: input.receipt_asset_id ?? null, source: input.source ?? "manual",
     ocr_confidence: input.ocr_confidence ?? null, notes: input.notes ?? null, spent_at, updated_at: nowIso(), deleted_at: null,
   };
@@ -335,6 +339,65 @@ export async function importItinerary(parsed: ParsedItinerary, opts: { trip_id?:
     }
   }
   return trip;
+}
+
+// ---------- Viajantes e checklists ----------
+
+const TRAVELER_COLORS = ["#38bdf8", "#f59e0b", "#34d399", "#f472b6", "#a78bfa", "#fb923c", "#22d3ee", "#facc15"];
+
+export async function listTravelers(trip_id: string): Promise<TravelerRow[]> {
+  const rows = await db.travelers.where("trip_id").equals(trip_id).toArray();
+  return rows.filter((t) => !t.deleted_at).sort((a, b) => a.updated_at.localeCompare(b.updated_at));
+}
+
+export async function addTraveler(trip_id: string, name: string): Promise<TravelerRow> {
+  const n = (await listTravelers(trip_id)).length;
+  return put("travelers", { id: uuidv7(), trip_id, name: name.trim(), color: TRAVELER_COLORS[n % TRAVELER_COLORS.length]!, updated_at: nowIso(), deleted_at: null });
+}
+
+export async function updateTraveler(id: string, patch: Partial<TravelerRow>) {
+  const t = await db.travelers.get(id);
+  if (!t) return;
+  await put("travelers", { ...t, ...patch, updated_at: nowIso() });
+}
+
+export async function deleteTraveler(id: string) {
+  await softDelete("travelers", id);
+}
+
+export async function listChecklist(trip_id: string, kind?: ChecklistKind, day_id?: string | null): Promise<ChecklistItem[]> {
+  const rows = await db.checklist_items.where("trip_id").equals(trip_id).toArray();
+  return rows
+    .filter((i) => !i.deleted_at && (!kind || i.kind === kind) && (day_id === undefined || i.day_id === day_id))
+    .sort((a, b) => a.position - b.position);
+}
+
+export async function addChecklistItem(trip_id: string, kind: ChecklistKind, text: string, day_id: string | null = null): Promise<ChecklistItem> {
+  const existing = await listChecklist(trip_id, kind, day_id);
+  const pos = (existing[existing.length - 1]?.position ?? 0) + 1;
+  return put("checklist_items", { id: uuidv7(), trip_id, day_id, kind, text: text.trim(), done: false, position: pos, updated_at: nowIso(), deleted_at: null });
+}
+
+export async function toggleChecklistItem(id: string) {
+  const i = await db.checklist_items.get(id);
+  if (!i) return;
+  await put("checklist_items", { ...i, done: !i.done, updated_at: nowIso() });
+}
+
+export async function deleteChecklistItem(id: string) {
+  await softDelete("checklist_items", id);
+}
+
+/** Preenche um checklist com o template (só itens ainda inexistentes). */
+export async function applyChecklistTemplate(trip_id: string, kind: Exclude<ChecklistKind, "day">): Promise<number> {
+  const existing = new Set((await listChecklist(trip_id, kind, null)).map((i) => i.text.toLowerCase()));
+  let n = 0;
+  for (const text of CHECKLIST_TEMPLATES[kind]) {
+    if (existing.has(text.toLowerCase())) continue;
+    await addChecklistItem(trip_id, kind, text, null);
+    n++;
+  }
+  return n;
 }
 
 // ---------- Utilidades ----------

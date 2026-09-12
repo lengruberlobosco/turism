@@ -1,6 +1,7 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/db/schema";
-import { listDays, assetsForDay } from "@/db/repo";
+import { listDays, assetsForDay, listTravelers, listChecklist } from "@/db/repo";
+import type { ChecklistKind } from "@turism/domain";
 
 export function useTrip(tripId: string | undefined) {
   return useLiveQuery(() => (tripId ? db.trips.get(tripId) : undefined), [tripId]);
@@ -56,4 +57,10 @@ export function useSuggestions(tripId: string | undefined, dayId?: string) {
       return rows.filter((s) => s.status === "proposed" && (!dayId || s.day_id === dayId));
     }, [tripId, dayId]) ?? []
   );
+}
+export function useTravelers(tripId: string | undefined) {
+  return useLiveQuery(() => (tripId ? listTravelers(tripId) : []), [tripId]) ?? [];
+}
+export function useChecklist(tripId: string | undefined, kind?: ChecklistKind, dayId?: string | null) {
+  return useLiveQuery(() => (tripId ? listChecklist(tripId, kind, dayId) : []), [tripId, kind, dayId]) ?? [];
 }
