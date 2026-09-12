@@ -1,9 +1,12 @@
-import { handleOptions, json } from "../_shared/cors.ts";
+import { handleOptions, json, corsHeaders } from "../_shared/cors.ts";
+import { requireUser } from "../_shared/auth.ts";
 import { makeClient, suggestPois, findReferenceImage } from "../_shared/ai.ts";
 
 Deno.serve(async (req) => {
   const pre = handleOptions(req);
   if (pre) return pre;
+  const user = await requireUser(req);
+  if (user instanceof Response) return new Response(user.body, { status: user.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   try {
     const body = (await req.json()) as { trip_id: string; days: Array<{ day_index: number; date: string | null; title: string | null; narrative: string | null }> };
     const client = makeClient(Deno.env.get("ANTHROPIC_API_KEY"));

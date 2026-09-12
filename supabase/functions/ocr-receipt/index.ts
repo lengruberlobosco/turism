@@ -1,9 +1,12 @@
-import { handleOptions, json } from "../_shared/cors.ts";
+import { handleOptions, json, corsHeaders } from "../_shared/cors.ts";
+import { requireUser } from "../_shared/auth.ts";
 import { makeClient, ocrReceipt } from "../_shared/ai.ts";
 
 Deno.serve(async (req) => {
   const pre = handleOptions(req);
   if (pre) return pre;
+  const user = await requireUser(req);
+  if (user instanceof Response) return new Response(user.body, { status: user.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   try {
     const body = (await req.json()) as { image_base64: string; media_type?: string };
     if (!body.image_base64) return json({ error: "image_base64 obrigatório" }, 400);

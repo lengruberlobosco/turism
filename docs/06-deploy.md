@@ -22,11 +22,13 @@ supabase functions deploy parse-itinerary ocr-receipt suggest-pois fx-refresh
 
 Auth: habilitar **Email (magic link)** e, quando desejado, **passkeys**. Storage: o bucket `assets` é criado pela migration com política por membro da viagem.
 
+As funções `parse-itinerary`, `ocr-receipt` e `suggest-pois` exigem usuário autenticado (o app envia o JWT da sessão). `fx-refresh` exige a service role key ou `FX_REFRESH_TOKEN` no header `Authorization`.
+
 Agendar câmbio (SQL Editor, com pg_cron e pg_net ativos):
 
 ```sql
 select cron.schedule('fx-refresh', '0 */6 * * *', $$
-  select net.http_post(url := 'https://<ref>.functions.supabase.co/fx-refresh', headers := '{"Content-Type":"application/json"}'::jsonb, body := '{}'::jsonb)
+  select net.http_post(url := 'https://<ref>.functions.supabase.co/fx-refresh', headers := jsonb_build_object('Content-Type', 'application/json', 'Authorization', 'Bearer ' || current_setting('app.fx_refresh_token')), body := '{}'::jsonb)
 $$);
 ```
 

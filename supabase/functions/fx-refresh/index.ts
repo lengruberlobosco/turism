@@ -7,6 +7,10 @@ const BASES = ["BRL", "USD", "EUR", "GBP", "ARS", "CLP", "UYU", "JPY", "CHF", "C
 Deno.serve(async (req) => {
   const pre = handleOptions(req);
   if (pre) return pre;
+  // Chamada por cron/servidor: exige a service role key (ou o segredo FX_REFRESH_TOKEN) no header Authorization.
+  const auth = req.headers.get("Authorization") ?? "";
+  const token = auth.replace(/^Bearer /, "");
+  if (!token || (token !== Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") && token !== Deno.env.get("FX_REFRESH_TOKEN"))) return json({ error: "não autorizado" }, 401);
   try {
     const res = await fetch("https://api.frankfurter.dev/v1/latest?base=EUR");
     if (!res.ok) throw new Error(`Frankfurter ${res.status}`);
