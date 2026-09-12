@@ -1,0 +1,14 @@
+{
+  "name": "@turism/functions",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Edge Functions (Deno) + lógica de IA compartilhada com o worker Node (_shared/ai.ts).",
+  "scripts": { "test": "vitest run", "typecheck": "tsc --noEmit -p tsconfig.json" },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.110.0",
+    "@turism/domain": "workspace:*",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": { "typescript": "^5.7.3", "vitest": "^3.0.5", "@types/node": "^22.13.1" }
+}

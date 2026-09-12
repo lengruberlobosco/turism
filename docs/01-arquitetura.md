@@ -7,7 +7,7 @@
 | Tipo de aplicação | **PWA instalável (SPA)** com Service Worker, manifest e armazenamento local | Um único código para desktop e mobile; instalável sem loja; funciona offline; escape hatch para lojas via Capacitor se necessário |
 | Frontend | **TypeScript + React 19 + Vite + vite-plugin-pwa (Workbox)** | Ecossistema maduro para PWA; Workbox resolve precache/runtime cache; Vite gera SW e manifest |
 | Roteamento / estado servidor | **TanStack Router + TanStack Query** | Rotas tipadas; cache e retry de rede declarativos |
-| Estado local / offline | **PowerSync (SQLite via wa-sqlite + OPFS) sincronizando com Postgres** | Banco relacional real no navegador, consultas SQL reativas, sync bidirecional com fila de escrita offline e resolução de conflito no servidor |
+| Estado local / offline | **Dexie.js (IndexedDB) + motor de sync próprio (outbox + pull por `updated_at`)** — implementado nas Fases 0–3. **PowerSync (SQLite/OPFS)** fica como evolução quando a colaboração em tempo real exigir | Zero infraestrutura extra para funcionar 100 % local; arquivos (Blobs) e dados no mesmo banco; o mesmo esquema lógico migra para PowerSync sem mudar o domínio |
 | UI | **Tailwind CSS + shadcn/ui (Radix)** | Acessibilidade nativa, componentes touch-friendly, tema claro/escuro |
 | Backend | **Supabase** (Postgres + Auth + Storage + Edge Functions em Deno/TS) | Postgres com RLS resolve multiusuário; Storage assinado para arquivos; Edge Functions para chamadas a APIs externas sem expor chaves |
 | Jobs assíncronos de IA | **Worker Node/TS separado** (Fastify) com fila **pg-boss** (Postgres) | OCR, parsing de roteiros e busca de imagens levam segundos/minutos; não podem rodar no request HTTP |
@@ -20,7 +20,7 @@
 | Observabilidade | Sentry (web + worker) + OpenTelemetry nas Edge Functions | Erros de sync offline são difíceis de reproduzir; precisa de telemetria |
 | Monorepo | **pnpm workspaces + Turborepo** | Compartilhar schemas Zod, tipos e regras de negócio entre web, edge functions e worker |
 
-> **Alternativa mais enxuta**: se o time for pequeno e o multiusuário não for prioridade no início, trocar PowerSync por **Dexie.js + Dexie Cloud** reduz infraestrutura. Mantém-se o mesmo desenho de domínio.
+> **Decisão de implementação (Fases 0–3)**: o app roda **sem nenhum backend** (modo local) e ganha sync, IA online e OCR por visão quando `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` são definidos. A camada de escrita (`apps/web/src/db/repo.ts`) já registra tudo em uma *outbox*, então trocar o motor de sync por PowerSync é uma mudança contida.
 
 ## 2. Visão geral (diagrama)
 
@@ -29,7 +29,7 @@ flowchart LR
   subgraph Device["Dispositivo do viajante (PWA)"]
     UI[React UI]
     SW[Service Worker<br/>Workbox]
-    SQL[(SQLite local<br/>PowerSync / OPFS)]
+    SQL[(IndexedDB · Dexie<br/>dados + blobs + outbox)]
     FILES[(Cache Storage / OPFS<br/>documentos pinados)]
     OCRL[Tesseract.js<br/>OCR offline]
     UI --> SQL
@@ -39,7 +39,7 @@ flowchart LR
   end
 
   subgraph Cloud["Backend"]
-    PS[PowerSync Service]
+    PS[Sync: PostgREST<br/>upsert outbox / pull updated_at]
     PG[(Postgres<br/>Supabase + RLS)]
     ST[(Supabase Storage)]
     EF[Edge Functions<br/>Deno/TS]
@@ -75,8 +75,8 @@ flowchart LR
 
 | Camada | O que é | Onde vive offline | Como sincroniza |
 |---|---|---|---|
-| **Dados estruturados** | viagens, dias, atividades, gastos, metadados de documentos, taxas de câmbio | SQLite local (PowerSync) | Sync contínuo; escritas offline entram em fila e são aplicadas no Postgres ao reconectar |
-| **Arquivos** | PDFs, imagens, áudios | Cache Storage / OPFS, indexados por `sha256` | Download sob demanda + **pin por viagem** ("Preparar para offline"); upload via fila com retry e Background Sync onde disponível |
+| **Dados estruturados** | viagens, dias, atividades, gastos, metadados de documentos, taxas de câmbio | IndexedDB (Dexie) | Escritas vão para a *outbox*; `syncNow()` faz upsert em lote no Postgres e puxa linhas com `updated_at` maior que o cursor; last-writer-wins por linha |
+| **Arquivos** | PDFs, imagens, áudios | IndexedDB (`asset_blobs`, Blob + miniatura), `sha256` no metadado | Upload em segundo plano para o Storage; **"Preparar para offline"** baixa os que faltam por prioridade (críticos primeiro) |
 | **App shell** | HTML/JS/CSS, fontes, ícones | Precache do Workbox | Versionado no build; atualização com prompt "Nova versão disponível" |
 
 ### 3.2 Modo "Preparar para offline"
@@ -89,7 +89,7 @@ Antes da viagem, o usuário aciona **Preparar viagem para offline**. O app:
 4. Mostra progresso e o estado de cada dia (✔ completo, ◐ parcial, ✖ não baixado).
 5. Grava um "snapshot de câmbio" para as moedas da viagem.
 
-O estado de pin é por dispositivo (tabela local `asset_offline_state`) e nunca sobe ao servidor.
+No modo local (sem backend) todos os arquivos já estão no dispositivo; a tela de configurações mostra uso e cota e permite **Preparar OCR offline** (baixa worker, core WASM e idiomas do Tesseract para o cache do Service Worker).
 
 ### 3.3 Regras de sincronização e conflito
 

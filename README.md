@@ -2,7 +2,27 @@
 
 Plataforma web responsiva (PWA, desktop e mobile) para gerenciamento **logístico, documental e financeiro** de viagens complexas, com prioridade máxima para **disponibilidade offline** de documentos e dados críticos durante os deslocamentos.
 
-Este repositório contém, nesta fase, o **desenho de arquitetura, modelo de dados e UX** do produto. O código será estruturado seguindo o que está descrito aqui.
+## Começar
+
+```bash
+pnpm install
+pnpm dev            # http://localhost:5173 — funciona sem backend (modo local/offline)
+pnpm test           # testes unitários (domínio, funções de IA, worker)
+pnpm --filter @turism/web test:e2e   # Playwright: fluxo offline, importação de roteiro, OCR
+```
+
+O app é utilizável **sem qualquer serviço externo**: viagens, dias, documentos, fotos, gastos e importação de roteiro em texto ficam no dispositivo (IndexedDB) e funcionam offline. Com um projeto Supabase e uma chave da Claude API (ver `docs/05-roadmap.md`), ganha sincronização entre dispositivos, OCR por visão, leitura de PDF por IA e sugestões de passeios.
+
+## Estrutura
+
+| Caminho | O que é |
+|---|---|
+| `packages/domain` | Regras puras e esquemas Zod: dias e fuso, câmbio, OCR heurístico, parser de roteiro, CSV |
+| `apps/web` | PWA React + Vite + Workbox; Dexie (IndexedDB); telas do produto; e2e Playwright |
+| `supabase/migrations` | Esquema Postgres com RLS e Storage |
+| `supabase/functions` | Edge Functions (Deno). `_shared/ai.ts` concentra a lógica de IA (Claude API, structured outputs) |
+| `apps/ai-worker` | Worker Node (Fastify + pg-boss) para jobs longos de IA, reutilizando `_shared/ai.ts` |
+| `docs/` | Arquitetura, modelo de dados, UX da tela do dia, lacunas/funcionalidades, roadmap |
 
 ## Documentação
 

@@ -1,5 +1,24 @@
 # 05 — Roadmap de entrega
 
+## Estado atual (após a primeira implementação)
+
+| Fase | Status | Evidência |
+|---|---|---|
+| 0 — Fundação | ✅ | Monorepo pnpm; PWA instalável com Workbox; Dexie; CI (`.github/workflows/ci.yml`) |
+| 1 — Módulos 1 e 2 | ✅ | Tela do dia (mobile e desktop), timeline, documentos vinculados a dias, viewer "modo balcão", captura de foto/áudio, gesto de deslizar, fixar dia, modo estrada. E2E `viagem completa funciona offline` |
+| 2 — Módulo 3 | ✅ | Gastos com taxa congelada, câmbio Frankfurter com cache, OCR em camadas (Claude visão via Edge Function; Tesseract.js local), CSV. E2E `OCR no dispositivo lê o total de um recibo` |
+| 3 — Módulo 4 | ✅ código / ⏳ deploy | `_shared/ai.ts` (structured outputs, PDF nativo, web search, Wikimedia com licença), Edge Functions, worker pg-boss, parser local de texto como fallback. E2E `importa roteiro em texto`. Exige `ANTHROPIC_API_KEY` e projeto Supabase para a parte online |
+| 4 — Diferenciais | parcial | Backup ZIP export/import, Web Share Target (links/texto), modo estrada, botão rápido de combustível. Pendentes: ingestão por e-mail, voos, mapa offline, divisão de despesas, módulo veículo |
+
+### Como ativar o backend
+
+1. `supabase init` / `supabase link`; `supabase db push` aplica `supabase/migrations/0001_init.sql`.
+2. `supabase secrets set ANTHROPIC_API_KEY=…` e `supabase functions deploy parse-itinerary ocr-receipt suggest-pois fx-refresh`.
+3. No app: `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` (`apps/web/.env`). Login por magic link em Configurações.
+4. (Opcional) `apps/ai-worker` para jobs longos: `.env` a partir de `.env.example`, `pnpm --filter @turism/ai-worker start`.
+5. (Opcional) agendar `fx-refresh` a cada 6 h via pg_cron (comentário no final da migration).
+
+
 ## Fase 0 — Fundação (2 semanas)
 
 - Monorepo (pnpm + Turborepo), design system, CI (lint, typecheck, testes, build do SW).
