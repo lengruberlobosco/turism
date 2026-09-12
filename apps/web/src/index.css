@@ -14,6 +14,9 @@ html, body, #root { height: 100%; }
 body { background: var(--color-ink); color: #e2e8f0; -webkit-tap-highlight-color: transparent; }
 * { scrollbar-width: thin; scrollbar-color: #334155 transparent; }
 
+/* Grid de uma coluna: a coluna implícita não pode crescer além do container (evita rolagem horizontal no mobile). */
+.grid:not([class*="grid-cols"]) { grid-template-columns: minmax(0, 1fr); }
+
 .safe-bottom { padding-bottom: calc(env(safe-area-inset-bottom) + 1rem); }
 .safe-top { padding-top: env(safe-area-inset-top); }
 

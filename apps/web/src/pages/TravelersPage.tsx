@@ -39,7 +39,7 @@ export function TravelersPage() {
                   <div key={b.traveler_id} className="flex items-center gap-3 rounded-xl bg-ink/60 px-3 py-2">
                     <span className="h-8 w-8 rounded-full flex items-center justify-center font-semibold text-ink" style={{ background: t.color }}>{t.name.slice(0, 1).toUpperCase()}</span>
                     <input className="bg-transparent flex-1 min-w-0 font-medium focus:outline-none" defaultValue={t.name} onBlur={(e) => { if (e.target.value.trim() && e.target.value !== t.name) void updateTraveler(t.id, { name: e.target.value.trim() }); }} aria-label="Nome" />
-                    <div className="text-right text-sm">
+                    <div className="text-right text-sm shrink-0">
                       <p className={b.net > 0.005 ? "text-ok" : b.net < -0.005 ? "text-danger" : "text-slate-400"}>{b.net > 0.005 ? "recebe " : b.net < -0.005 ? "deve " : "quite "}{formatMoney(Math.abs(b.net), trip.base_currency)}</p>
                       <p className="text-xs text-slate-500">pagou {formatMoney(b.paid, trip.base_currency)} · parte {formatMoney(b.owes, trip.base_currency)}</p>
                     </div>
@@ -57,7 +57,7 @@ export function TravelersPage() {
                 {transfers.map((t, i) => (
                   <li key={i} className="flex items-center gap-2 text-sm">
                     <span className="font-medium">{nameOf(t.from)}</span> <ArrowRight size={14} className="text-slate-500" /> <span className="font-medium">{nameOf(t.to)}</span>
-                    <span className="ml-auto tabular-nums font-semibold">{formatMoney(t.amount, trip.base_currency)}</span>
+                    <span className="ml-auto tabular-nums font-semibold shrink-0">{formatMoney(t.amount, trip.base_currency)}</span>
                   </li>
                 ))}
               </ul>
