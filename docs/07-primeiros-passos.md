@@ -10,7 +10,7 @@ O app precisa de um "endereço na internet" para ser instalado no celular. A for
 
 1. Entre em https://vercel.com e clique em **Sign Up** → **Continue with GitHub**. Autorize.
 2. Clique em **Add New… → Project**. Escolha o repositório **turism**. Se ele não aparecer, clique em *Adjust GitHub App Permissions* e libere o repositório.
-3. Na tela de configuração, em **Branch**, escolha `claude/travel-management-platform-dplfg0`. Em **Framework Preset**, se aparecer "Fastify" ou outro nome, troque para **Other**. O resto o arquivo `vercel.json` já define.
+3. Na tela de configuração: em **Root Directory**, clique em *Edit* e escolha a pasta **apps/web**; em **Framework Preset**, deixe **Vite**; em **Branch**, escolha `claude/travel-management-platform-dplfg0`. O resto o arquivo `apps/web/vercel.json` já define.
 4. Clique em **Deploy** e aguarde uns 3 minutos. Ao final aparece um endereço como `turism-xxxx.vercel.app`. Esse é o seu app.
 
 Se preferir a Netlify, o processo é igual (o arquivo `netlify.toml` já está pronto).
@@ -43,6 +43,6 @@ O passo a passo técnico está em `docs/06-deploy.md`. Nessa etapa é melhor ter
 
 ## Se algo der errado
 
-- **A Vercel deu erro no deploy:** copie o texto do erro e me envie.
+- **A Vercel deu erro no deploy:** confira em *Settings → Build and Deployment* se **Root Directory** é `apps/web` e **Framework Preset** é Vite; depois *Deployments → Redeploy*. Se persistir, copie o texto do erro e me envie.
 - **O app não abre offline:** confirme que foi instalado na tela inicial e abra-o uma vez com internet antes.
 - **Quer mudar algo no app:** descreva o que deseja; as alterações são feitas no código e a Vercel publica sozinha a cada atualização.

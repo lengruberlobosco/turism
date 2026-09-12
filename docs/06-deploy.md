@@ -9,7 +9,7 @@ Build estático: `pnpm --filter @turism/web build` → `apps/web/dist`. Requisit
 - `sw.js` com `Cache-Control: no-cache` (atualizações detectadas); `assets/*` e `ocr/*` imutáveis.
 - Variáveis de build opcionais: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
 
-Configurações prontas: `vercel.json` (Vercel) e `netlify.toml` (Netlify). Os assets de OCR (≈ 18 MB) são gerados no `prebuild` e não vão para o Git.
+Configurações prontas: `apps/web/vercel.json` (Vercel, com *Root Directory* = `apps/web`; o `vercel.json` da raiz cobre o caso de root vazio) e `netlify.toml` (Netlify). Os assets de OCR (≈ 18 MB) são gerados no `prebuild` e não vão para o Git.
 
 ## 2. Backend (Supabase)
 
