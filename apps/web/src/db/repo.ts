@@ -1,7 +1,7 @@
 import { db } from "./schema";
 import {
   uuidv7, dateRange, pickRate, toBase,
-  CHECKLIST_TEMPLATES,
+  CHECKLIST_TEMPLATES, parseExif, isTrackFile,
   type Trip, type TripDay, type Activity, type Asset, type AssetDay, type Expense, type OcrResult, type AiSuggestion, type ParsedItinerary,
   type TravelerRow, type ChecklistItem, type ChecklistKind,
 } from "@turism/domain";
@@ -169,21 +169,34 @@ export async function compressImage(file: Blob, max = 2048): Promise<Blob> {
 export async function addFileAsset(
   trip_id: string,
   file: File | Blob,
-  input: { title: string; category: string; kind?: Asset["kind"]; critical?: boolean; sensitive?: boolean; day_ids?: string[]; captured_at?: string | null; expires_at?: string | null },
+  input: { title: string; category: string; kind?: Asset["kind"]; critical?: boolean; sensitive?: boolean; day_ids?: string[]; captured_at?: string | null; expires_at?: string | null; autoLinkByDate?: boolean },
 ): Promise<Asset> {
-  const mime = file.type || "application/octet-stream";
+  const fileName = "name" in file ? (file as File).name : "";
+  let mime = file.type || (isTrackFile(fileName, null) ? (fileName.toLowerCase().endsWith(".kml") ? "application/vnd.google-earth.kml+xml" : "application/gpx+xml") : "application/octet-stream");
   const kind: Asset["kind"] = input.kind ?? (mime.startsWith("image/") ? "photo" : mime.startsWith("audio/") ? "audio" : "document");
+  // EXIF antes da compressão (a compressão descarta metadados)
+  let exif: ReturnType<typeof parseExif> | null = null;
+  if (kind === "photo" && /jpe?g/i.test(mime)) {
+    try { exif = parseExif(await file.slice(0, 256 * 1024).arrayBuffer()); } catch { exif = null; }
+  }
   const blob = kind === "photo" ? await compressImage(file) : file;
+  if (blob.type) mime = blob.type;
+  let day_ids = input.day_ids ?? [];
+  if (day_ids.length === 0 && exif?.date && input.autoLinkByDate !== false) {
+    const match = (await listDays(trip_id)).find((d) => d.date === exif!.date);
+    if (match) day_ids = [match.id];
+  }
   const asset: Asset = {
-    id: uuidv7(), trip_id, kind, category: input.category, title: input.title, storage_path: null, url: null, mime: blob.type || mime,
+    id: uuidv7(), trip_id, kind, category: input.category, title: input.title, storage_path: null, url: null, mime,
     size_bytes: blob.size, sha256: await sha256(blob), sensitive: input.sensitive ?? false, critical: input.critical ?? false,
-    ocr: null, ocr_status: "none", captured_at: input.captured_at ?? nowIso(), expires_at: input.expires_at ?? null, attribution: null, updated_at: nowIso(), deleted_at: null,
+    ocr: null, ocr_status: "none", captured_at: input.captured_at ?? (exif?.taken_at ? new Date(exif.taken_at).toISOString() : nowIso()), expires_at: input.expires_at ?? null,
+    lat: exif?.lat ?? null, lng: exif?.lng ?? null, attribution: null, updated_at: nowIso(), deleted_at: null,
   };
   const thumb = await makeThumb(blob);
   await db.transaction("rw", db.assets, db.asset_blobs, db.asset_days, db.outbox, async () => {
     await put("assets", asset);
     await db.asset_blobs.put({ asset_id: asset.id, blob, thumb });
-    for (const day_id of input.day_ids ?? []) await linkAssetToDay(asset, day_id);
+    for (const day_id of day_ids) await linkAssetToDay(asset, day_id);
   });
   return asset;
 }
@@ -261,6 +274,8 @@ export interface ExpenseInput {
   receipt_asset_id?: string | null;
   paid_by?: string | null;
   split?: Record<string, number> | null;
+  liters?: number | null;
+  odometer_km?: number | null;
   source?: Expense["source"];
   ocr_confidence?: number | null;
   spent_at?: string;
@@ -280,7 +295,7 @@ export async function addExpense(input: ExpenseInput, base_currency: string): Pr
   if (rate == null) throw new Error(`Sem taxa de câmbio ${input.currency}→${base_currency}. Conecte-se para atualizar o câmbio ou informe a taxa manualmente.`);
   const e: Expense = {
     id: uuidv7(), trip_id: input.trip_id, day_id: input.day_id, category: input.category, amount: input.amount, currency: input.currency,
-    fx_rate: rate, fx_rate_date: rate_date, amount_base: toBase(input.amount, rate), paid_by: input.paid_by ?? null, split: input.split ?? null, payment_method: input.payment_method ?? null,
+    fx_rate: rate, fx_rate_date: rate_date, amount_base: toBase(input.amount, rate), paid_by: input.paid_by ?? null, split: input.split ?? null, liters: input.liters ?? null, odometer_km: input.odometer_km ?? null, payment_method: input.payment_method ?? null,
     merchant: input.merchant ?? null, receipt_asset_id: input.receipt_asset_id ?? null, source: input.source ?? "manual",
     ocr_confidence: input.ocr_confidence ?? null, notes: input.notes ?? null, spent_at, updated_at: nowIso(), deleted_at: null,
   };

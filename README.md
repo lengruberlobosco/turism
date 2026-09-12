@@ -22,7 +22,8 @@ O app é utilizável **sem qualquer serviço externo**: viagens, dias, documento
 | `supabase/migrations` | Esquema Postgres com RLS e Storage |
 | `supabase/functions` | Edge Functions (Deno). `_shared/ai.ts` concentra a lógica de IA (Claude API, structured outputs) |
 | `apps/ai-worker` | Worker Node (Fastify + pg-boss) para jobs longos de IA, reutilizando `_shared/ai.ts` |
-| `docs/` | Arquitetura, modelo de dados, UX da tela do dia, lacunas/funcionalidades, roadmap |
+| `docs/` | Arquitetura, modelo de dados, UX da tela do dia, lacunas/funcionalidades, roadmap, deploy |
+| `vercel.json`, `netlify.toml`, `apps/ai-worker/Dockerfile` | Configuração de deploy (ver `docs/06-deploy.md`) |
 
 ## Documentação
 
@@ -32,7 +33,8 @@ O app é utilizável **sem qualquer serviço externo**: viagens, dias, documento
 | [docs/02-modelo-de-dados.md](docs/02-modelo-de-dados.md) | Modelo de dados (Postgres + SQLite local), diagrama ER, DDL, regras de sincronização e de segurança (RLS) |
 | [docs/03-ux-tela-do-dia.md](docs/03-ux-tela-do-dia.md) | Fluxo de experiência do usuário da tela principal de um dia de viagem, wireframes mobile/desktop, estados e microinterações |
 | [docs/04-lacunas-e-novas-funcionalidades.md](docs/04-lacunas-e-novas-funcionalidades.md) | Análise crítica do escopo, lacunas operacionais e lista priorizada de novas funcionalidades e tecnologias |
-| [docs/05-roadmap.md](docs/05-roadmap.md) | Fases de entrega, estrutura do monorepo e critérios de aceite |
+| [docs/05-roadmap.md](docs/05-roadmap.md) | Fases de entrega, status e critérios de aceite |
+| [docs/06-deploy.md](docs/06-deploy.md) | Deploy da PWA, do backend Supabase e do worker; checklist de go-live |
 
 ## Módulos do produto
 

@@ -170,3 +170,19 @@ test("viajantes: divisão de gasto e acerto de contas", async ({ page }) => {
   await expect(page.getByText("R$ 50,00").first()).toBeVisible();
   await expect(page.getByText("recebe R$ 50,00")).toBeVisible();
 });
+
+test("rota GPX abre no visualizador offline com distância e navegação", async ({ page }) => {
+  await page.goto("/trips/new");
+  await page.getByPlaceholder("Expedição Patagônia 2026").fill("GPX");
+  await page.getByRole("button", { name: "Criar viagem" }).click();
+  await expect(page.getByRole("button", { name: /^Dia 1/ })).toBeVisible();
+  const gpx = `<?xml version="1.0"?><gpx><trk><name>Serra</name><trkseg><trkpt lat="-22.90" lon="-43.20"><ele>10</ele></trkpt><trkpt lat="-22.90" lon="-43.10"><ele>110</ele></trkpt><trkpt lat="-22.80" lon="-43.10"><ele>60</ele></trkpt></trkseg></trk></gpx>`;
+  await page.getByRole("button", { name: /Documento ou link/ }).click();
+  await page.locator('input[type="file"]').setInputFiles({ name: "serra.gpx", mimeType: "", buffer: Buffer.from(gpx) });
+  await expect(page.getByRole("group", { name: "Categoria" }).getByRole("button", { name: /Rota GPS/ })).toHaveClass(/chip-on/);
+  await page.getByRole("button", { name: "Salvar" }).click();
+  await page.getByRole("button", { name: /^serra/ }).click();
+  await expect(page.getByRole("dialog", { name: "serra" })).toBeVisible();
+  await expect(page.getByText(/21\.\d km/)).toBeVisible();
+  await expect(page.getByRole("link", { name: /Navegar/ })).toHaveAttribute("href", /maps\/dir/);
+});

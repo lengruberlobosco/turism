@@ -163,3 +163,80 @@ describe("expiry", () => {
     expect(expiryLabel("ok", null, "2026-05-10")).toBeNull();
   });
 });
+
+describe("exif", () => {
+  it("lê DateTimeOriginal e GPS de um JPEG mínimo", async () => {
+    const { parseExif } = await import("../src");
+    // JPEG: SOI + APP1 (Exif, TIFF little-endian) com IFD0 → ExifIFD(0x9003) e GPSIFD
+    const enc = (s: string) => Array.from(s, (c) => c.charCodeAt(0));
+    const tiff: number[] = [];
+    const u16 = (n: number) => [n & 0xff, n >> 8];
+    const u32 = (n: number) => [n & 0xff, (n >> 8) & 0xff, (n >> 16) & 0xff, (n >>> 24) & 0xff];
+    tiff.push(...enc("II"), ...u16(42), ...u32(8));
+    // IFD0 @8: 2 entradas → ExifIFD @ 8+2+24+4 = 38, GPS IFD @ 38 + 2 + 12 + 4 + 20 = 76
+    tiff.push(...u16(2));
+    tiff.push(...u16(0x8769), ...u16(4), ...u32(1), ...u32(38));
+    tiff.push(...u16(0x8825), ...u16(4), ...u32(1), ...u32(76));
+    tiff.push(...u32(0));
+    // Exif IFD @38: 1 entrada: DateTimeOriginal ASCII 20 bytes @ 38+2+12+4 = 56
+    tiff.push(...u16(1), ...u16(0x9003), ...u16(2), ...u32(20), ...u32(56), ...u32(0));
+    tiff.push(...enc("2026:05:12 09:41:00\0"));
+    // GPS IFD @76: 4 entradas; rationals @ 76+2+48+4 = 130 (lat) e 154 (lng)
+    tiff.push(...u16(4));
+    tiff.push(...u16(1), ...u16(2), ...u32(2), ...enc("S\0"), 0, 0);
+    tiff.push(...u16(2), ...u16(5), ...u32(3), ...u32(130));
+    tiff.push(...u16(3), ...u16(2), ...u32(2), ...enc("W\0"), 0, 0);
+    tiff.push(...u16(4), ...u16(5), ...u32(3), ...u32(154));
+    tiff.push(...u32(0));
+    for (const [d, m, s] of [[22, 54, 0], [43, 12, 0]]) tiff.push(...u32(d!), ...u32(1), ...u32(m!), ...u32(1), ...u32(s!), ...u32(1));
+    const app1 = [...enc("Exif\0\0"), ...tiff];
+    const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe1, (app1.length + 2) >> 8, (app1.length + 2) & 0xff, ...app1, 0xff, 0xd9]);
+    const info = parseExif(jpeg.buffer);
+    expect(info.date).toBe("2026-05-12");
+    expect(info.taken_at).toBe("2026-05-12T09:41:00");
+    expect(info.lat).toBeCloseTo(-22.9, 5);
+    expect(info.lng).toBeCloseTo(-43.2, 5);
+  });
+  it("ignora arquivos sem EXIF", async () => {
+    const { parseExif } = await import("../src");
+    expect(parseExif(new Uint8Array([0x89, 0x50, 0x4e, 0x47]).buffer).date).toBeNull();
+  });
+});
+
+describe("gpx", () => {
+  it("calcula distância, desnível e path SVG", async () => {
+    const { parseTrack, trackToSvgPath } = await import("../src");
+    const gpx = `<?xml version="1.0"?><gpx><trk><name>Serra</name><trkseg>
+      <trkpt lat="-22.90" lon="-43.20"><ele>10</ele></trkpt>
+      <trkpt lat="-22.90" lon="-43.10"><ele>110</ele></trkpt>
+      <trkpt lat="-22.80" lon="-43.10"><ele>60</ele></trkpt></trkseg></trk>
+      <wpt lat="-22.85" lon="-43.15"><name>Mirante</name></wpt></gpx>`;
+    const t = parseTrack(gpx);
+    expect(t.name).toBe("Serra");
+    expect(t.points).toHaveLength(3);
+    expect(t.distance_km).toBeCloseTo(21.4, 0);
+    expect(t.ascent_m).toBe(100);
+    expect(t.descent_m).toBe(50);
+    expect(t.waypoints[0]?.name).toBe("Mirante");
+    expect(trackToSvgPath(t, 200, 100)).toMatch(/^M[\d.]+ [\d.]+ L/);
+  });
+  it("lê KML", async () => {
+    const { parseTrack } = await import("../src");
+    const t = parseTrack(`<kml><Document><name>Rota</name><Placemark><LineString><coordinates>-43.2,-22.9,0 -43.1,-22.9,0</coordinates></LineString></Placemark></Document></kml>`);
+    expect(t.points).toHaveLength(2);
+    expect(t.distance_km).toBeGreaterThan(10);
+  });
+});
+
+describe("vehicle", () => {
+  it("calcula consumo e custo por km a partir dos abastecimentos", async () => {
+    const { vehicleStats } = await import("../src");
+    const s = vehicleStats([
+      { amount_base: 300, liters: 50, odometer_km: 10000, spent_at: "2026-05-10T10:00:00Z" },
+      { amount_base: 240, liters: 40, odometer_km: 10480, spent_at: "2026-05-12T10:00:00Z" },
+    ]);
+    expect(s).toMatchObject({ fills: 2, liters: 90, cost_base: 540, km: 480, km_per_liter: 12, price_per_liter: 6 });
+    expect(s.cost_per_km).toBeCloseTo(1.13, 2);
+    expect(vehicleStats([]).km).toBeNull();
+  });
+});

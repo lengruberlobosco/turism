@@ -26,6 +26,8 @@ export function ExpenseSheet({ open, onClose, trip, day, presetCategory }: { ope
   const [category, setCategory] = useState(presetCategory ?? "food");
   const [merchant, setMerchant] = useState("");
   const [notes, setNotes] = useState("");
+  const [liters, setLiters] = useState("");
+  const [odometer, setOdometer] = useState("");
   const [rate, setRate] = useState<number | null>(null);
   const [manualRate, setManualRate] = useState("");
   const [err, setErr] = useState<string | null>(null);
@@ -35,7 +37,7 @@ export function ExpenseSheet({ open, onClose, trip, day, presetCategory }: { ope
 
   useEffect(() => {
     if (!open) {
-      setPaidBy(null); setSplit(null);
+      setPaidBy(null); setSplit(null); setLiters(""); setOdometer("");
       setStep("choose"); setReceipt(null); setOcr(null); setAmount(""); setMerchant(""); setNotes(""); setErr(null); setManualRate(""); setCurrency(trip.base_currency); setCategory(presetCategory ?? "food");
     }
   }, [open, trip.base_currency, presetCategory]);
@@ -85,7 +87,7 @@ export function ExpenseSheet({ open, onClose, trip, day, presetCategory }: { ope
         if (ocr) await setAssetOcr(a.id, ocr, "done");
       }
       await addExpense(
-        { trip_id: trip.id, day_id: day?.id ?? null, category, amount: value, currency, merchant: merchant || null, notes: notes || null, receipt_asset_id: receiptId, source: ocr?.source ?? "manual", ocr_confidence: ocr?.confidence ?? null, fx_rate: fx, paid_by: paidBy ?? travelers[0]?.id ?? null, split },
+        { trip_id: trip.id, day_id: day?.id ?? null, category, amount: value, currency, merchant: merchant || null, notes: notes || null, receipt_asset_id: receiptId, source: ocr?.source ?? "manual", ocr_confidence: ocr?.confidence ?? null, fx_rate: fx, paid_by: paidBy ?? travelers[0]?.id ?? null, split, liters: category === "fuel" && liters ? Number(liters.replace(",", ".")) : null, odometer_km: category === "fuel" && odometer ? Number(odometer.replace(",", ".")) : null },
         trip.base_currency,
       );
       onClose();
@@ -152,6 +154,12 @@ export function ExpenseSheet({ open, onClose, trip, day, presetCategory }: { ope
               ))}
             </div>
           </Field>
+          {category === "fuel" && (
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Litros"><input className="input" inputMode="decimal" value={liters} onChange={(e) => setLiters(e.target.value)} placeholder="45,2" /></Field>
+              <Field label="Odômetro (km)" hint="Permite calcular consumo e custo por km."><input className="input" inputMode="numeric" value={odometer} onChange={(e) => setOdometer(e.target.value)} placeholder="102340" /></Field>
+            </div>
+          )}
           {travelers.length > 0 && (
             <>
               <Field group label="Quem pagou">

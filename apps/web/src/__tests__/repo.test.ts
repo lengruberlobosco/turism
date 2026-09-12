@@ -97,3 +97,27 @@ describe("viajantes e checklists", () => {
     expect(await listChecklist(trip.id, "day", null)).toHaveLength(0);
   });
 });
+
+describe("EXIF e veículo", () => {
+  it("foto com data EXIF é vinculada ao dia correspondente e guarda GPS", async () => {
+    const { parseExif } = await import("@turism/domain");
+    const trip = await createTrip({ title: "T", start_date: "2026-05-10", end_date: "2026-05-12", base_currency: "BRL" });
+    const days = await listDays(trip.id);
+    // JPEG mínimo com DateTimeOriginal 2026-05-12 (mesma construção do teste do domínio)
+    const enc = (s: string) => Array.from(s, (c) => c.charCodeAt(0));
+    const u16 = (n: number) => [n & 0xff, n >> 8], u32 = (n: number) => [n & 0xff, (n >> 8) & 0xff, (n >> 16) & 0xff, (n >>> 24) & 0xff];
+    const tiff = [...enc("II"), ...u16(42), ...u32(8), ...u16(1), ...u16(0x8769), ...u16(4), ...u32(1), ...u32(26), ...u32(0), ...u16(1), ...u16(0x9003), ...u16(2), ...u32(20), ...u32(44), ...u32(0), ...enc("2026:05:12 09:41:00\0")];
+    const app1 = [...enc("Exif\0\0"), ...tiff];
+    const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe1, (app1.length + 2) >> 8, (app1.length + 2) & 0xff, ...app1, 0xff, 0xd9]);
+    expect(parseExif(jpeg.buffer).date).toBe("2026-05-12");
+    const a = await addFileAsset(trip.id, new File([jpeg], "IMG_1.jpg", { type: "image/jpeg" }), { title: "Foto", category: "photo" });
+    const links = await db.asset_days.where("asset_id").equals(a.id).toArray();
+    expect(links.map((l) => l.day_id)).toEqual([days[2]!.id]);
+    expect(a.captured_at?.startsWith("2026-05-12")).toBe(true);
+  });
+  it("abastecimento grava litros e odômetro", async () => {
+    const trip = await createTrip({ title: "T", start_date: null, end_date: null, base_currency: "BRL" });
+    const e = await addExpense({ trip_id: trip.id, day_id: null, category: "fuel", amount: 300, currency: "BRL", liters: 50, odometer_km: 10000 }, "BRL");
+    expect([e.liters, e.odometer_km]).toEqual([50, 10000]);
+  });
+});

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { Download, Plus, RefreshCw, Trash2 } from "lucide-react";
-import { formatMoney, summarize, categoryIcon, categoryLabel, expensesToCsv, type Trip, type TripDay, type CurrentDayResult, type Expense } from "@turism/domain";
+import { formatMoney, summarize, categoryIcon, categoryLabel, expensesToCsv, vehicleStats, type Trip, type TripDay, type CurrentDayResult, type Expense } from "@turism/domain";
 import { useExpenses } from "@/lib/hooks";
 import { ExpenseSheet } from "@/components/ExpenseSheet";
 import { deleteExpense, updateTrip } from "@/db/repo";
@@ -24,6 +24,7 @@ export function ExpensesPage() {
   const [busy, setBusy] = useState(false);
   const travelers = useTravelers(trip.id);
   const nameOf = (id: string | null) => travelers.find((t) => t.id === id)?.name;
+  const vehicle = vehicleStats(expenses.filter((e) => e.category === "fuel").map((e) => ({ amount_base: e.amount_base, liters: e.liters ?? null, odometer_km: e.odometer_km ?? null, spent_at: e.spent_at })));
   useEffect(() => { void lastFxRefresh(trip.base_currency).then(setFx); }, [trip.base_currency, busy]);
   const sums = summarize(expenses);
   const byDay = new Map<string | null, Expense[]>();
@@ -72,6 +73,19 @@ export function ExpensesPage() {
         </div>
         <p className="text-[11px] text-slate-500 mt-1">Cada gasto guarda a taxa do momento do lançamento; o total não muda quando o câmbio muda.</p>
       </div>
+      {vehicle.fills > 0 && (
+        <section className="card mb-3">
+          <h2 className="section-title mb-2">🚗 Veículo</h2>
+          <div className="flex flex-wrap gap-2 text-sm">
+            <span className="chip">⛽ {vehicle.fills} abastecimento(s) · {vehicle.liters} L · {formatMoney(vehicle.cost_base, trip.base_currency)}</span>
+            {vehicle.price_per_liter != null && <span className="chip">{formatMoney(vehicle.price_per_liter, trip.base_currency)}/L</span>}
+            {vehicle.km != null && <span className="chip">📏 {vehicle.km} km</span>}
+            {vehicle.km_per_liter != null && <span className="chip">{vehicle.km_per_liter} km/L</span>}
+            {vehicle.cost_per_km != null && <span className="chip">{formatMoney(vehicle.cost_per_km, trip.base_currency)}/km</span>}
+          </div>
+          {vehicle.km == null && <p className="text-xs text-slate-500 mt-2">Informe o odômetro em cada abastecimento para ver km rodados, consumo e custo por km.</p>}
+        </section>
+      )}
       {dayOrder.map((dayId) => {
         const list = byDay.get(dayId);
         if (!list?.length) return null;
