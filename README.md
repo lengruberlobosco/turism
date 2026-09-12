@@ -35,6 +35,7 @@ O app é utilizável **sem qualquer serviço externo**: viagens, dias, documento
 | [docs/04-lacunas-e-novas-funcionalidades.md](docs/04-lacunas-e-novas-funcionalidades.md) | Análise crítica do escopo, lacunas operacionais e lista priorizada de novas funcionalidades e tecnologias |
 | [docs/05-roadmap.md](docs/05-roadmap.md) | Fases de entrega, status e critérios de aceite |
 | [docs/06-deploy.md](docs/06-deploy.md) | Deploy da PWA, do backend Supabase e do worker; checklist de go-live |
+| [docs/07-primeiros-passos.md](docs/07-primeiros-passos.md) | Guia para leigos: publicar, instalar no celular e usar |
 
 ## Módulos do produto
 
